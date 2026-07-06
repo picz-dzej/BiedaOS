@@ -1,7 +1,11 @@
 const $ = (sel) => document.querySelector(sel);
-const state = { month: new Date().toISOString().slice(0, 7), categories: [], charts: {} };
+const state = { month: todayISO().slice(0, 7), categories: [], charts: {} };
 const PALETTE = ["#A64B2A", "#8A6B4F", "#4A6B4A", "#5B4A6B", "#B08A3E",
                  "#6B4A4A", "#3E6B8A", "#7A7A52", "#9C5B70", "#4F6B5E", "#807566"];
+
+function todayISO() {
+  return new Date().toLocaleDateString("sv");
+}
 
 async function api(path, opts = {}) {
   const res = await fetch("/api" + path, { headers: { "Content-Type": "application/json" }, ...opts });
@@ -72,8 +76,13 @@ function renderTransactions(txs) {
         sel.appendChild(o);
       }
       sel.onchange = async () => {
-        await api(`/transactions/${t.id}`, { method: "PATCH", body: JSON.stringify({ category_id: Number(sel.value) }) });
-        load();
+        try {
+          await api(`/transactions/${t.id}`, { method: "PATCH", body: JSON.stringify({ category_id: Number(sel.value) }) });
+        } catch (err) {
+          alert(err.message);
+        } finally {
+          load();
+        }
       };
       cat.appendChild(sel);
     } else {
@@ -140,7 +149,10 @@ function renderTrend(trend) {
         { label: "wydatki", data: trend.map((t) => t.expenses / 100), backgroundColor: "#A64B2A" },
       ],
     },
-    options: { scales: { y: { beginAtZero: true } } },
+    options: {
+      plugins: { tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${zl(Math.round(ctx.parsed.y * 100))}` } } },
+      scales: { y: { beginAtZero: true } },
+    },
   });
 }
 
@@ -167,7 +179,7 @@ $("#entry-form").addEventListener("submit", async (e) => {
     await api("/transactions", { method: "POST", body: JSON.stringify(payload) });
     $("#entry-text").value = "";
     $("#entry-error").textContent = "";
-    const entryMonth = (payload.date || new Date().toISOString()).slice(0, 7);
+    const entryMonth = (payload.date || todayISO()).slice(0, 7);
     state.month = entryMonth;
     load();
   } catch (err) {
@@ -189,10 +201,12 @@ $("#add-category").onclick = async () => {
 };
 
 $("#save-model").onclick = async () => {
-  await api("/settings", { method: "PUT", body: JSON.stringify({ ollama_model: $("#ollama-model").value.trim() }) });
-  refreshOllamaBadge();
+  try {
+    await api("/settings", { method: "PUT", body: JSON.stringify({ ollama_model: $("#ollama-model").value.trim() }) });
+    refreshOllamaBadge();
+  } catch (err) { alert(err.message); }
 };
 
-$("#entry-date").value = new Date().toISOString().slice(0, 10);
-load();
+$("#entry-date").value = todayISO();
+load().catch((err) => console.error("Błąd ładowania:", err));
 refreshOllamaBadge();
