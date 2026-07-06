@@ -39,6 +39,10 @@ class CategoryIn(BaseModel):
     name: str
 
 
+class SettingsIn(BaseModel):
+    ollama_model: str
+
+
 def create_app(db_path=None) -> FastAPI:
     app = FastAPI(title="BiedaOS")
     conn = db.connect(db_path)
@@ -123,6 +127,46 @@ def create_app(db_path=None) -> FastAPI:
     def categories():
         return [dict(r) for r in conn.execute(
             "SELECT id, name, builtin FROM categories ORDER BY builtin DESC, name")]
+
+    @app.post("/api/categories")
+    def add_category(cat: CategoryIn):
+        name = cat.name.strip().lower()
+        if not name:
+            raise HTTPException(422, "Pusta nazwa kategorii.")
+        exists = conn.execute("SELECT 1 FROM categories WHERE name=?", (name,)).fetchone()
+        if exists:
+            raise HTTPException(409, "Taka kategoria już istnieje.")
+        cur = conn.execute("INSERT INTO categories(name, builtin) VALUES(?, 0)", (name,))
+        conn.commit()
+        return {"id": cur.lastrowid}
+
+    @app.get("/api/ollama/status")
+    def ollama_status():
+        return {"available": categorize.ollama_available(), "model": categorize.get_model(conn)}
+
+    @app.get("/api/settings")
+    def get_settings():
+        return {"ollama_model": categorize.get_model(conn)}
+
+    @app.put("/api/settings")
+    def put_settings(s: SettingsIn):
+        conn.execute(
+            "INSERT INTO settings(key, value) VALUES('ollama_model', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (s.ollama_model.strip(),))
+        conn.commit()
+        return {"ok": True}
+
+    @app.get("/api/trend")
+    def trend():
+        last = conn.execute("SELECT MAX(substr(date, 1, 7)) AS m FROM transactions").fetchone()["m"]
+        month = max(last or "", _date.today().isoformat()[:7])
+        out, m = [], month
+        for _ in range(12):
+            _, income, by_cat = month_data(m)
+            out.append({"month": m, "income": income, "expenses": sum(by_cat.values())})
+            m = prev_month(m)
+        out.reverse()
+        return out
 
     if static_dir().exists():
         app.mount("/", StaticFiles(directory=static_dir(), html=True), name="static")
