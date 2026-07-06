@@ -3,10 +3,13 @@ from biedaos.__main__ import free_port
 
 
 def test_free_port_skips_taken():
+    # Port przydzielony przez system zamiast 8137 — test nie może się wywalać,
+    # gdy BiedaOS akurat działa obok.
     s = socket.socket()
-    s.bind(("127.0.0.1", 8137))
+    s.bind(("127.0.0.1", 0))
+    taken = s.getsockname()[1]
     try:
-        assert free_port(8137) != 8137
+        assert free_port(taken) != taken
     finally:
         s.close()
 

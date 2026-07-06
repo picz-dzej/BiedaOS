@@ -7,9 +7,12 @@ OLLAMA_URL = "http://127.0.0.1:11434"
 
 BUILTIN_KEYWORDS = {
     "spożywcze": ["biedronka", "lidl", "żabka", "zabka", "auchan", "kaufland",
-                  "carrefour", "dino", "aldi", "spożyw", "warzywniak"],
+                  "carrefour", "dino", "aldi", "spożyw", "warzywniak",
+                  "stokrotka", "netto", "polo market", "intermarche", "lewiatan",
+                  "groszek", "delikatesy", "piekarnia", "rossmann", "hebe"],
     "transport": ["orlen", "paliwo", "benzyna", "mpk", "ztm", "pkp", "bilet",
-                  "uber", "bolt", "parking", "autostrada"],
+                  "uber", "bolt", "parking", "autostrada",
+                  "bp", "shell", "circle k", "moya", "amic", "lotos", "taxi"],
     "mieszkanie": ["czynsz", "wynajem", "mieszkanie"],
     "rachunki": ["prąd", "prad", "gaz", "woda", "internet", "telefon", "rachunek"],
     "zdrowie": ["apteka", "lekarz", "dentysta", "badania", "leki", "przychodnia"],
@@ -21,6 +24,16 @@ BUILTIN_KEYWORDS = {
                     "abonament", "hbo", "disney", "icloud"],
     "zwierzęta": ["weterynarz", "karma", "zoolog", "psi fryzjer"],
 }
+
+_WORD_CHARS = "a-z0-9ąćęłńóśźż"
+
+
+def _keyword_hit(norm: str, word: str) -> bool:
+    # Krótkie słowa kluczowe (bp, gaz, gra…) tylko jako całe słowo — inaczej
+    # "gazeta" wpadałaby w rachunki, a "herbpol" w transport.
+    if len(word) <= 3:
+        return re.search(rf"(?<![{_WORD_CHARS}]){re.escape(word)}(?![{_WORD_CHARS}])", norm) is not None
+    return word in norm
 
 
 def normalize(desc: str) -> str:
@@ -39,7 +52,7 @@ def categorize(conn, description: str) -> int:
         return row["category_id"]
     cats = {r["name"]: r["id"] for r in conn.execute("SELECT id, name FROM categories")}
     for cat_name, words in BUILTIN_KEYWORDS.items():
-        if cat_name in cats and any(w in norm for w in words):
+        if cat_name in cats and any(_keyword_hit(norm, w) for w in words):
             return cats[cat_name]
     answer = ollama_categorize(norm, list(cats.keys()), get_model(conn))
     if answer in cats:
@@ -66,7 +79,13 @@ def ollama_available() -> bool:
 
 def ollama_categorize(desc: str, categories: list[str], model: str) -> str | None:
     prompt = (
-        "Przypisz wydatek do jednej kategorii.\n"
+        "Przypisz polski wydatek domowy do jednej kategorii.\n"
+        "Przykłady:\n"
+        '"stokrotka" -> spożywcze\n'
+        '"bp" -> transport\n'
+        '"netflix" -> subskrypcje\n'
+        '"apteka gemini" -> zdrowie\n'
+        '"czynsz" -> mieszkanie\n'
         f'Wydatek: "{desc}"\n'
         f"Dostępne kategorie: {', '.join(categories)}\n"
         "Odpowiedz wyłącznie nazwą jednej kategorii z listy, bez żadnych innych słów."

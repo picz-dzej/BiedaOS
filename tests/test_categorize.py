@@ -23,6 +23,34 @@ def test_learned_correction_beats_builtin(conn, monkeypatch):
     assert categorize.categorize(conn, "biedronka") == cat_id(conn, "rozrywka")
 
 
+def test_polish_chains_in_dictionary(conn, monkeypatch):
+    monkeypatch.setattr(categorize, "ollama_categorize", lambda *a, **k: pytest.fail("nie wolno wołać Ollamy"))
+    assert categorize.categorize(conn, "Stokrotka") == cat_id(conn, "spożywcze")
+    assert categorize.categorize(conn, "netto zakupy") == cat_id(conn, "spożywcze")
+    assert categorize.categorize(conn, "BP") == cat_id(conn, "transport")
+    assert categorize.categorize(conn, "shell paliwo") == cat_id(conn, "transport")
+    assert categorize.categorize(conn, "rossmann") == cat_id(conn, "spożywcze")
+
+
+def test_short_keyword_needs_word_boundary(conn, monkeypatch):
+    monkeypatch.setattr(categorize, "ollama_categorize", lambda *a, **k: None)
+    assert categorize.categorize(conn, "herbpol") == cat_id(conn, "inne")
+    assert categorize.categorize(conn, "gazeta") == cat_id(conn, "inne")
+
+
+def test_ollama_prompt_contains_examples(monkeypatch):
+    captured = {}
+
+    def fake_urlopen(req, timeout):
+        captured["body"] = req.data.decode()
+        raise OSError("stop")
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    categorize.ollama_categorize("stacja xyz", ["spożywcze", "transport", "inne"], "llama3.2:3b")
+    assert "stokrotka" in captured["body"]
+    assert "transport" in captured["body"]
+
+
 def test_ollama_used_when_no_match(conn, monkeypatch):
     monkeypatch.setattr(categorize, "ollama_categorize", lambda desc, cats, model: "zdrowie")
     assert categorize.categorize(conn, "wizyta u pana Zenka") == cat_id(conn, "zdrowie")
