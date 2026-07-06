@@ -1,4 +1,5 @@
 import sys
+import threading
 from datetime import date as _date
 from pathlib import Path
 
@@ -47,9 +48,21 @@ class SettingsIn(BaseModel):
 def create_app(db_path=None) -> FastAPI:
     app = FastAPI(title="BiedaOS")
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
-    conn = db.connect(db_path)
+    db.connect(db_path).close()  # schemat i seed od razu na starcie
+
+    # Handlery lecą w puli wątków; jedno współdzielone połączenie SQLite
+    # psuje się przy równoległych żądaniach (wyścig o cache statementów),
+    # więc każdy wątek dostaje własne.
+    _local = threading.local()
+
+    def get_conn():
+        conn = getattr(_local, "conn", None)
+        if conn is None:
+            conn = _local.conn = db.connect(db_path)
+        return conn
 
     def month_data(month: str):
+        conn = get_conn()
         txs = [dict(r) for r in conn.execute(
             "SELECT t.id, t.date, t.type, t.amount_grosze, t.description, "
             "t.category_id, c.name AS category FROM transactions t "
@@ -65,7 +78,7 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.get("/api/months")
     def months():
-        rows = conn.execute(
+        rows = get_conn().execute(
             "SELECT DISTINCT substr(date, 1, 7) AS m FROM transactions ORDER BY m").fetchall()
         return [r["m"] for r in rows]
 
@@ -95,6 +108,7 @@ def create_app(db_path=None) -> FastAPI:
         except parsing.ParseError as e:
             raise HTTPException(422, str(e))
         d = entry.date or _date.today().isoformat()
+        conn = get_conn()
         cat_id = categorize.categorize(conn, desc) if entry.type == "expense" else None
         cur = conn.execute(
             "INSERT INTO transactions(date, type, amount_grosze, description, category_id) "
@@ -104,6 +118,7 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.patch("/api/transactions/{tx_id}")
     def patch_tx(tx_id: int, patch: TxPatch):
+        conn = get_conn()
         row = conn.execute("SELECT * FROM transactions WHERE id=?", (tx_id,)).fetchone()
         if not row:
             raise HTTPException(404, "Nie ma takiej transakcji.")
@@ -121,13 +136,14 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.delete("/api/transactions/{tx_id}")
     def delete_tx(tx_id: int):
+        conn = get_conn()
         conn.execute("DELETE FROM transactions WHERE id=?", (tx_id,))
         conn.commit()
         return {"ok": True}
 
     @app.get("/api/categories")
     def categories():
-        return [dict(r) for r in conn.execute(
+        return [dict(r) for r in get_conn().execute(
             "SELECT id, name, builtin FROM categories ORDER BY builtin DESC, name")]
 
     @app.post("/api/categories")
@@ -135,6 +151,7 @@ def create_app(db_path=None) -> FastAPI:
         name = cat.name.strip().lower()
         if not name:
             raise HTTPException(422, "Pusta nazwa kategorii.")
+        conn = get_conn()
         exists = conn.execute("SELECT 1 FROM categories WHERE name=?", (name,)).fetchone()
         if exists:
             raise HTTPException(409, "Taka kategoria już istnieje.")
@@ -144,16 +161,17 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.get("/api/ollama/status")
     def ollama_status():
-        return {"available": categorize.ollama_available(), "model": categorize.get_model(conn)}
+        return {"available": categorize.ollama_available(), "model": categorize.get_model(get_conn())}
 
     @app.get("/api/settings")
     def get_settings():
-        return {"ollama_model": categorize.get_model(conn)}
+        return {"ollama_model": categorize.get_model(get_conn())}
 
     @app.put("/api/settings")
     def put_settings(s: SettingsIn):
         if not s.ollama_model.strip():
             raise HTTPException(422, "Pusta nazwa modelu.")
+        conn = get_conn()
         conn.execute(
             "INSERT INTO settings(key, value) VALUES('ollama_model', ?) "
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (s.ollama_model.strip(),))
@@ -162,7 +180,7 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.get("/api/trend")
     def trend():
-        last = conn.execute("SELECT MAX(substr(date, 1, 7)) AS m FROM transactions").fetchone()["m"]
+        last = get_conn().execute("SELECT MAX(substr(date, 1, 7)) AS m FROM transactions").fetchone()["m"]
         month = max(last or "", _date.today().isoformat()[:7])
         out, m = [], month
         for _ in range(12):

@@ -1,6 +1,6 @@
 [project]
 name = "biedaos"
-version = "0.1.1"
+version = "0.1.2"
 description = "Lokalny kalkulator finansowy"
 requires-python = ">=3.11"
 dependencies = ["fastapi>=0.110", "uvicorn>=0.29"]

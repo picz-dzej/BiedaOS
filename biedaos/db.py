@@ -39,6 +39,9 @@ def connect(db_path=None) -> sqlite3.Connection:
     conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # Po jednym połączeniu na wątek serwera — przy zapisie czekaj na zwolnienie
+    # blokady pliku zamiast rzucać "database is locked".
+    conn.execute("PRAGMA busy_timeout = 5000")
     conn.executescript(_SCHEMA)
     for name in BUILTIN_CATEGORIES:
         conn.execute("INSERT OR IGNORE INTO categories(name, builtin) VALUES(?, 1)", (name,))
