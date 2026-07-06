@@ -18,12 +18,19 @@ def free_port(start: int = 8137) -> int:
     raise RuntimeError("Brak wolnego portu.")
 
 
+def schedule_browser(url: str) -> threading.Timer:
+    t = threading.Timer(1.0, webbrowser.open, [url])
+    t.daemon = True
+    t.start()
+    return t
+
+
 def main() -> None:
     port = free_port()
     url = f"http://127.0.0.1:{port}"
     print(f"BiedaOS działa pod adresem {url}")
     print("Zamknij to okno, żeby wyłączyć aplikację.")
-    threading.Timer(1.0, webbrowser.open, [url]).start()
+    schedule_browser(url)
     uvicorn.run(create_app(), host="127.0.0.1", port=port, log_level="warning")
 
 
