@@ -6,3 +6,6 @@ biedaos.db
 dist/
 build/
 .superpowers/
+.DS_Store
+BiedaOS-mac
+BiedaOS.exe
