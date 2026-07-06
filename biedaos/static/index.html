@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BiedaOS</title>
+<link rel="stylesheet" href="style.css">
+<script src="chart.umd.js"></script>
+</head>
+<body>
+<header>
+  <h1>BiedaOS</h1>
+  <span id="ollama-badge" class="badge">AI: sprawdzam…</span>
+</header>
+
+<form id="entry-form" autocomplete="off">
+  <input id="entry-text" type="text" placeholder="np. biedronka 47,30" autofocus>
+  <label class="toggle"><input id="entry-type" type="checkbox"> przychód</label>
+  <input id="entry-date" type="date">
+  <button type="submit">Dodaj</button>
+  <span id="entry-error" class="error"></span>
+</form>
+
+<nav id="month-nav">
+  <button id="prev-month">←</button>
+  <h2 id="month-label"></h2>
+  <button id="next-month">→</button>
+</nav>
+
+<section id="summary">
+  <div class="card"><span class="label">Przychody</span><span id="sum-income"></span></div>
+  <div class="card"><span class="label">Wydatki</span><span id="sum-expenses"></span></div>
+  <div class="card"><span class="label">Saldo</span><span id="sum-balance"></span></div>
+</section>
+
+<section id="charts">
+  <div class="chart-box"><h3>Co zjada przychód</h3><canvas id="donut"></canvas></div>
+  <div class="chart-box"><h3>Ostatnie 12 miesięcy</h3><canvas id="trend"></canvas></div>
+</section>
+
+<section id="recs-box">
+  <h3>Rekomendacje</h3>
+  <ul id="recs"></ul>
+</section>
+
+<section id="tx-box">
+  <h3>Transakcje</h3>
+  <table id="tx-table">
+    <thead><tr><th>Data</th><th>Opis</th><th>Kategoria</th><th class="num">Kwota</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+<footer>
+  <div>
+    <label>Nowa kategoria: <input id="new-category" type="text"></label>
+    <button id="add-category">Dodaj</button>
+  </div>
+  <div>
+    <label>Model Ollamy: <input id="ollama-model" type="text"></label>
+    <button id="save-model">Zapisz</button>
+  </div>
+  <p class="hint">Dane siedzą w pliku <code>biedaos.db</code> obok aplikacji. Backup = skopiuj plik.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
