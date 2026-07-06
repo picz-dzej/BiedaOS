@@ -18,6 +18,7 @@ def test_month_over_month_spike():
 def test_negative_balance():
     recs = recommendations(100000, {"inne": 150000}, {}, [])
     assert any("Saldo ujemne" in r for r in recs)
+    assert any("Saldo ujemne (500,00 zł)" in r for r in recs)
 
 
 def test_thin_buffer():

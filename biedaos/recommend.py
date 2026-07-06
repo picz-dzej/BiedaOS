@@ -26,7 +26,7 @@ def recommendations(income, by_cat, prev_by_cat, last3):
 
     if income > 0 and total > income:
         out.append(
-            f"Saldo ujemne ({zl(income - total)}). To problem poziomu przychodu albo "
+            f"Saldo ujemne ({zl(total - income)}). To problem poziomu przychodu albo "
             "stałej struktury wydatków — nie pojedynczych zakupów."
         )
     elif income > 0 and total > income * 0.9:
