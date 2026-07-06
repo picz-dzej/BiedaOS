@@ -16,7 +16,7 @@ Lokalny kalkulator finansowy. Twoje dane nie opuszczają Twojego komputera.
 
 ## Jak uruchomić (Mac)
 
-1. Pobierz `BiedaOS-mac` z zakładki **Releases**.
+1. Pobierz `BiedaOS-mac` z zakładki **Releases**. `BiedaOS-mac` wymaga Maca z Apple Silicon (M1 lub nowszy).
 2. Kliknij dwa razy. Jeśli Mac zablokuje plik (komunikat o nieznanym deweloperze),
    otwórz Terminal i wpisz:
    ```
@@ -91,5 +91,5 @@ python3 -m venv .venv
 .venv/bin/pytest
 
 # Build
-# Binaria buduje GitHub Actions po wypchnięciu taga v* (Tasks 11-12).
+# push taga v* uruchamia automatyczny build
 ```

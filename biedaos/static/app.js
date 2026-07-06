@@ -91,7 +91,7 @@ function renderTransactions(txs) {
     const del = document.createElement("button");
     del.className = "del"; del.textContent = "✕";
     del.onclick = async () => {
-      if (!confirm("Usunąć wpis „" + t.description + ""?")) return;
+      if (!confirm(`Usunąć wpis „${t.description}"?`)) return;
       await api(`/transactions/${t.id}`, { method: "DELETE" });
       load();
     };

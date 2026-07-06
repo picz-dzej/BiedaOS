@@ -3,6 +3,7 @@ from datetime import date as _date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -45,6 +46,7 @@ class SettingsIn(BaseModel):
 
 def create_app(db_path=None) -> FastAPI:
     app = FastAPI(title="BiedaOS")
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
     conn = db.connect(db_path)
 
     def month_data(month: str):
@@ -150,6 +152,8 @@ def create_app(db_path=None) -> FastAPI:
 
     @app.put("/api/settings")
     def put_settings(s: SettingsIn):
+        if not s.ollama_model.strip():
+            raise HTTPException(422, "Pusta nazwa modelu.")
         conn.execute(
             "INSERT INTO settings(key, value) VALUES('ollama_model', ?) "
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (s.ollama_model.strip(),))

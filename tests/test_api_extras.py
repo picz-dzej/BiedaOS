@@ -30,6 +30,10 @@ def test_settings_roundtrip(client):
     assert client.get("/api/settings").json() == {"ollama_model": "qwen2.5:3b"}
 
 
+def test_settings_empty_model_422(client):
+    assert client.put("/api/settings", json={"ollama_model": "  "}).status_code == 422
+
+
 def test_trend_12_months(client):
     client.post("/api/transactions", json={"text": "wypłata 5000", "type": "income", "date": "2026-07-01"})
     trend = client.get("/api/trend").json()

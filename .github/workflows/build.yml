@@ -27,6 +27,7 @@ jobs:
           python-version: "3.12"
       - run: pip install . pyinstaller pytest httpx
       - run: pytest -q
+      - run: node --check biedaos/static/app.js
       - run: pyinstaller BiedaOS.spec
       - if: matrix.os == 'macos-latest'
         run: mv dist/BiedaOS dist/BiedaOS-mac
