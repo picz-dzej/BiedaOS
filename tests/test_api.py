@@ -47,6 +47,12 @@ def test_patch_category_learns(client):
     assert t["category"] == "rozrywka"
 
 
+def test_patch_invalid_type_422(client):
+    tx = client.post("/api/transactions", json={"text": "kino 30", "type": "expense", "date": "2026-07-06"}).json()
+    r = client.patch(f"/api/transactions/{tx['id']}", json={"type": "foobar"})
+    assert r.status_code == 422
+
+
 def test_delete(client):
     tx = client.post("/api/transactions", json={"text": "kino 30", "type": "expense", "date": "2026-07-06"}).json()
     assert client.delete(f"/api/transactions/{tx['id']}").status_code == 200

@@ -104,6 +104,8 @@ def create_app(db_path=None) -> FastAPI:
         fields = patch.model_dump(exclude_none=True)
         if not fields:
             return {"ok": True}
+        if "type" in fields and fields["type"] not in ("income", "expense"):
+            raise HTTPException(422, "Typ musi być income albo expense.")
         sets = ", ".join(f"{k}=?" for k in fields)
         conn.execute(f"UPDATE transactions SET {sets} WHERE id=?", (*fields.values(), tx_id))
         conn.commit()
