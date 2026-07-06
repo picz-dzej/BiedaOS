@@ -1,6 +1,6 @@
 import re
 
-_AMOUNT = re.compile(r"(\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,](\d{1,2}))?")
+_AMOUNT = re.compile(r"(\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,](\d{1,2}))?")
 _CURRENCY = re.compile(r"\b(zł|zl|pln)\b", re.IGNORECASE)
 
 
@@ -13,7 +13,7 @@ def parse_entry(text: str) -> tuple[str, int]:
     if not matches:
         raise ParseError('Nie znalazłem kwoty we wpisie — dopisz ją, np. „biedronka 47,30".')
     m = matches[-1]
-    whole = int(re.sub(r"[  ]", "", m.group(1)))
+    whole = int(re.sub(r"[  ]", "", m.group(1)))
     frac = (m.group(2) or "0").ljust(2, "0")
     grosze = whole * 100 + int(frac)
     rest = text[: m.start()] + text[m.end():]
