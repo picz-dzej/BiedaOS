@@ -36,3 +36,14 @@ def test_fallback_inne(conn, monkeypatch):
 def test_ollama_answer_outside_list_ignored(conn, monkeypatch):
     monkeypatch.setattr(categorize, "ollama_categorize", lambda *a, **k: None)
     assert categorize.categorize(conn, "xyz") == cat_id(conn, "inne")
+
+
+def test_ollama_http_exception_swallowed(monkeypatch):
+    import http.client
+
+    def boom(*a, **k):
+        raise http.client.IncompleteRead(b"")
+
+    monkeypatch.setattr("urllib.request.urlopen", boom)
+    assert categorize.ollama_categorize("x", ["inne"], "llama3.2:3b") is None
+    assert categorize.ollama_available() is False

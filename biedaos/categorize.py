@@ -1,3 +1,4 @@
+import http.client
 import json
 import re
 import urllib.request
@@ -59,7 +60,7 @@ def ollama_available() -> bool:
     try:
         with urllib.request.urlopen(OLLAMA_URL + "/api/tags", timeout=1) as r:
             return r.status == 200
-    except OSError:
+    except (OSError, http.client.HTTPException):
         return False
 
 
@@ -78,7 +79,7 @@ def ollama_categorize(desc: str, categories: list[str], model: str) -> str | Non
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             answer = json.loads(r.read())["response"]
-    except (OSError, KeyError, ValueError):
+    except (OSError, http.client.HTTPException, KeyError, ValueError):
         return None
     answer = answer.strip().strip('"».').lower()
     return answer if answer in categories else None
